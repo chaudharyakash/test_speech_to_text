@@ -157,15 +157,15 @@ final_output = []
 
 
 
-f =  open(file+'.txt', 'w+')
+f =  open(file+'.txt1', 'w+')
 
 try:
     s = StreamGenerator(file)
     s.process_audio()
     stream = s.get_stream()
-    print ("started transcription")
     import time
     start_time = time.time()
+    print ("started transcription")
     while stream is not None:
         try:
             transcription = Transcription()
@@ -186,5 +186,5 @@ except:
 f.close()
 
 #add output to json file.
-with open(file+'.json', 'w') as f:
+with open(file+'.json1', 'w') as f:
     json.dump(final_output, f)
