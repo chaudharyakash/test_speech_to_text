@@ -42,7 +42,8 @@ def transcribe_gcs(gcs_uri, phrase_hints=[], language_code="en-US"):
 
     operation = client.long_running_recognize(config, audio)
 
-    return operation.result(timeout=90000).results
+    transcription_response = operation.result(timeout=90000)
+    return transcription_response.results
 
 class ResponseHandler:
     def __init__(self, response):
@@ -50,23 +51,20 @@ class ResponseHandler:
 
     def fetch_response(self):
         response_result = []
-        for result in self.response.results:
-            dict_result = {}
-            dict_result['is_final'] = result.is_final
-            dict_result['stability'] = result.stability
-            alternatives = result.alternatives
-            for alternative in alternatives:
-                alternative_result = {}
-                alternative_result['confidence'] = alternative.confidence
-                alternative_result['transcript'] = alternative.transcript
-                speakers = []
-                for word in alternative.words:
-                    speaker = {}
-                    speaker[word.word] = word.speaker_tag
-                    speakers.append(speaker)
-                alternative_result['speakers'] = speakers
-                dict_result['alternative_result'] = alternative_result
-            response_result.append(dict_result)
+        dict_result = {}
+        alternatives = response.alternatives
+        for alternative in alternatives:
+            alternative_result = {}
+            alternative_result['confidence'] = alternative.confidence
+            alternative_result['transcript'] = alternative.transcript
+            speakers = []
+            for word in alternative.words:
+                speaker = {}
+                speaker[word.word] = word.speaker_tag
+                speakers.append(speaker)
+            alternative_result['speakers'] = speakers
+            dict_result['alternative_result'] = alternative_result
+        response_result.append(dict_result)
         return response_result
 
 def process_response(responses):
