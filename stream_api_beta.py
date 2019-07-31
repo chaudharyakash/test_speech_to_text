@@ -62,8 +62,8 @@ class StreamGenerator:
                 end = n
 
             chunk = audio[start:end]
-            temp_file = file + str(counter) + ".flac"
-            chunk.export(temp_file, format="flac")
+            temp_file = file + str(counter) + ".wav"
+            chunk.export(temp_file, format="wav")
             with io.open(temp_file, 'rb') as audio_file:
                 content = audio_file.read()
 
@@ -79,14 +79,17 @@ class Transcription:
     def __init__(self):
         self.client = speech.SpeechClient()
         config = types.RecognitionConfig(
-            encoding=enums.RecognitionConfig.AudioEncoding.FLAC,
+            encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
             sample_rate_hertz=16000,
-            enable_speaker_diarization=True,
+            language_code='en-US',
+            enable_word_time_offsets=True,
             model='video',
-            use_enhanced=True,
-            enable_automatic_punctuation=True,
             diarization_speaker_count=2,
-            language_code='en-US')
+            enable_automatic_punctuation=True,
+            use_enhanced=True,
+            enable_speaker_diarization=True,
+            speech_contexts=[speech.types.SpeechContext(phrases=[])]
+        )
 
         self.streaming_config = types.StreamingRecognitionConfig(config=config)
 
@@ -168,6 +171,7 @@ try:
     for response in generator:
         r = ResponseHandler(response).fetch_response()
         f.write(process_response(r))
+        print (r)
         final_output.append(r)
     print("--- %s seconds ---" % (time.time() - start_time))
 
