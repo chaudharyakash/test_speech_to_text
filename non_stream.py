@@ -42,7 +42,7 @@ def transcribe_gcs(gcs_uri, phrase_hints=[], language_code="en-US"):
 
     operation = client.long_running_recognize(config, audio)
 
-    return operation.result(timeout=90000)
+    return operation.result(timeout=90000).results
 
 class ResponseHandler:
     def __init__(self, response):

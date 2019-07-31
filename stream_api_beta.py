@@ -166,17 +166,22 @@ try:
     print ("started transcription")
     import time
     start_time = time.time()
-    transcription = Transcription()
-    generator = transcription.transcribe_streaming(stream)
-    for response in generator:
-        r = ResponseHandler(response).fetch_response()
-        f.write(process_response(r))
-        print (r)
-        final_output.append(r)
+    while stream is not None:
+        try:
+            transcription = Transcription()
+            generator = transcription.transcribe_streaming(stream)
+            for response in generator:
+                r = ResponseHandler(response).fetch_response()
+                f.write(process_response(r))
+                print (r)
+                final_output.append(r)
+        except:
+            traceback.print_exc(file=sys.stdout)
     print("--- %s seconds ---" % (time.time() - start_time))
 
 except:
     traceback.print_exc(file=sys.stdout)
+
 
 f.close()
 
