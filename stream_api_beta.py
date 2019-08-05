@@ -1,5 +1,5 @@
 
-# Import necessary libraries 
+# Import necessary libraries
 from pydub import AudioSegment
 
 import io
@@ -11,8 +11,6 @@ from google.cloud.speech_v1p1beta1 import types
 import json
 import queue
 import os
-
-
 
 class StreamGenerator:
     def __init__(self, filename):
@@ -114,9 +112,12 @@ class ResponseHandler:
     def fetch_response(self):
         response_result = []
         for result in self.response.results:
+            if result.is_final is not True:
+                continue
             dict_result = {}
             dict_result['is_final'] = result.is_final
             dict_result['stability'] = result.stability
+            dict_result['alternatives'] = []
             alternatives = result.alternatives
             for alternative in alternatives:
                 alternative_result = {}
@@ -128,7 +129,7 @@ class ResponseHandler:
                     speaker[word.word] = word.speaker_tag
                     speakers.append(speaker)
                 alternative_result['speakers'] = speakers
-                dict_result['alternative_result'] = alternative_result
+                dict_result['alternatives'].append(alternative_result)
             response_result.append(dict_result)
         return response_result
 
@@ -136,55 +137,74 @@ def process_response(responses):
     output = ""
     current_speaker = None
     for response in responses:
-        speakers = response['alternative_result']['speakers']
-        for speaker in speakers:
-            for word in speaker:
-                if speaker[word] != current_speaker:
-                    current_speaker = speaker[word]
-                    output+="\n\nSpeaker-{}: ".format(current_speaker)
-                output+= "{} ".format(word)
+        if 'alternatives' in response:
+            for alternative in response['alternatives']:
+                speakers = alternative['speakers']
+                for speaker in speakers:
+                    for word in speaker:
+                        if speaker[word] != current_speaker:
+                            current_speaker = speaker[word]
+                            output+="\n\nSpeaker-{}: ".format(current_speaker)
+                        output+= "{} ".format(word)
     return output
 
 
+import itertools
+import traceback
+
+def peek(iterable):
+    try:
+        first = next(iterable)
+    except StopIteration:
+        return None, iterable
+    return first, itertools.chain([first], iterable)
+
+
+def transcribe_url(file):
+    final_output = []
+
+    # import wget
+    # file = url.split("/")[-1] + ".wav"
+    # wget.download(url, file)
+
+    f = open(file + '_copy.txt', 'w+')
+
+    try:
+        s = StreamGenerator(file)
+        s.process_audio()
+        stream = s.get_stream()
+        import time
+        start_time = time.time()
+        value, stream = peek(stream)
+
+        while value is not None:
+            print ("started transcription")
+            try:
+                transcription = Transcription()
+                generator = transcription.transcribe_streaming(stream)
+                for response in generator:
+                    r = ResponseHandler(response).fetch_response()
+                    process_response_output = process_response(r)
+                    f.write(process_response_output)
+                    f.flush()
+                    final_output.append(r)
+            except:
+                traceback.print_exc(file=sys.stdout)
+            value, stream = peek(stream)
+
+        print("--- %s seconds ---" % (time.time() - start_time))
+
+    except:
+        traceback.print_exc(file=sys.stdout)
+
+    f.close()
+
+    # add output to json file.
+    with open(file + '_copy.json', 'w') as f:
+        json.dump(final_output, f)
 
 
 import sys
-import traceback
-
 file =  sys.argv[1]
+transcribe_url(file)
 
-final_output = []
-
-
-
-f =  open(file+'.txt1', 'w+')
-
-try:
-    s = StreamGenerator(file)
-    s.process_audio()
-    stream = s.get_stream()
-    import time
-    start_time = time.time()
-    print ("started transcription")
-    while stream is not None:
-        try:
-            transcription = Transcription()
-            generator = transcription.transcribe_streaming(stream)
-            for response in generator:
-                r = ResponseHandler(response).fetch_response()
-                f.write(process_response(r))
-                print (r)
-                final_output.append(r)
-        except:
-            traceback.print_exc(file=sys.stdout)
-    print("--- %s seconds ---" % (time.time() - start_time))
-
-except:
-    traceback.print_exc(file=sys.stdout)
-
-
-f.close()
-
-#add output to json file.
-with open(file+'.json1', 'w') as f:
-    json.dump(final_output, f)
