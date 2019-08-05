@@ -64,8 +64,7 @@ class StreamGenerator:
             chunk.export(temp_file, format="wav")
             with io.open(temp_file, 'rb') as audio_file:
                 content = audio_file.read()
-
-            self.chunks.put(content)
+                self.chunks.put(content)
             os.system("rm {}".format(temp_file))
 
             # Increment counter for the next chunk
